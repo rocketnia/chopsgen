@@ -448,17 +448,20 @@ function HtmlTag( name, attrs, body ) {
 _.rule( my.widgetToHtml, function ( fail, widget, path, state ) {
     if ( !(widget instanceof HtmlTag) )
         fail( "It wasn't an HtmlTag." );
-    var body = my.widgetToHtml( widget.body_, path, state );
     var name = widget.name_;
+    var openTag = "<" + name + _.arrMap( widget.attrs_, function ( kv ) {
+        var v = kv[ 1 ];
+        // TODO: Make Path a manual widget.
+        if ( v instanceof Path )
+            v = v.from( path );
+        var rendered = my.manualWidgetToText( v, path, state );
+        state = rendered.state;
+        return " " +
+            kv[ 0 ] + "=" + "\"" + attrEscape( rendered.text ) + "\"";
+    } ).join( "" ) + ">";
+    var body = my.widgetToHtml( widget.body_, path, state );
     return { state: body.state, js: body.js, css: body.css, html:
-        "<" + name + _.arrMap( widget.attrs_, function ( kv ) {
-            var v = kv[ 1 ];
-            if ( v instanceof Path )
-                v = v.from( path );
-            return " " +
-                kv[ 0 ] + "=" + "\"" + attrEscape( v ) + "\"";
-        } ).join( "" ) + ">" + body.html + "</" + name + ">"
-    };
+        openTag + body.html + "</" + name + ">" };
 } );
 
 my.tag = function ( name, var_args ) {
@@ -636,6 +639,14 @@ function NiceWidget( details ) {
                 return { state: state, js: [], css: [],
                     html: rendered.text };
             } );
+        } else if ( k === "widgetHtml" ) {
+            html.push( function ( tok, path, state ) {
+                state = pushState( state, "token", tok );
+                var rendered = my.widgetToHtml( v, path, state );
+                state = unpushState( rendered.state, "token" );
+                return { state: state, js: rendered.js,
+                    css: rendered.css, html: rendered.html };
+            } );
         } else {
             throw new Error( "Unrecognized widget() keyword arg." );
         }
@@ -706,14 +717,15 @@ _.rule( my.manualWidgetToText, function (
     return { state: state, text: widgetText.join( "" ) };
 } );
 
-function ManualToken() {}
+function WidgetToken() {}
 
 _.rule( my.manualWidgetToText, function (
     fail, widget, path, state ) {
     
-    if ( !(widget instanceof ManualToken) )
-        fail( "It wasn't a ManualToken." );
-    if ( !(_.likeObjectLiteral( state ) && "token" in state && _.likeArray( state.token )) )
+    if ( !(widget instanceof WidgetToken) )
+        fail( "It wasn't a WidgetToken." );
+    if ( !(_.likeObjectLiteral( state ) && "token" in state
+        && _.likeArray( state.token )) )
         throw new Error( "The state wasn't the right type." );
     if ( state.token.length === 0 )
         throw new Error( "The token stack was empty." );
@@ -746,25 +758,30 @@ function ltrimBlockDocParser( func ) {
     };
 }
 
+function manualChops( chops ) {
+    return $c.parseInlineChops(
+        $c.ChopsEnvObj.of( manualWidgetEnv ), chops );
+}
+
 function ltrimClassBlockParser( tagName ) {
     return function ( chops, env ) {
-        var apart = $c.letChopLtrimRegex( chops, /^\s*(\S+)\s*/ );
+        var apart = $c.letChopWords( chops, 1 );
         if ( !apart ) throw new Error( "need a class" );
         return my.blockWidget(
-            my.tag( tagName, "class", apart.match[ 1 ] )(
-                ltrimParse( env, apart.rest )
+            my.tag( tagName, "class", manualChops( apart[ 0 ] ) )(
+                ltrimParse( env, apart[ 1 ] )
             ) );
     };
 }
 
 function ltrimClassBlockDocParser( tagName ) {
     return function ( chops, env ) {
-        var apart = $c.letChopLtrimRegex( chops, /^\s*(\S+)\s*/ );
+        var apart = $c.letChopWords( chops, 1 );
         if ( !apart ) throw new Error( "need a class" );
         return my.blockWidget(
-            my.tag( tagName, "class", apart.match[ 1 ] )(
+            my.tag( tagName, "class", manualChops( apart[ 0 ] ) )(
                 $c.parseDocumentOfChops(
-                    env, $c.chopParas( apart.rest ) )
+                    env, $c.chopParas( apart[ 1 ] ) )
             ) );
     };
 }
@@ -854,38 +871,40 @@ var widgetEnv = {
         } finally { quoteLevel--; }
     },
     "quotepunc": function ( chops, env ) {
-        var apart = $c.letChopLtrimRegex( chops, /^\s*(\S+)\s*/ );
+        var apart = $c.letChopWords( chops, 1 );
         if ( !apart ) throw new Error( "quotepunc needs an arg" );
         var q = quoteLevel % 2 === 0 ? "\"" : "'";
         quoteLevel++;
         try {
-            return [ q, $c.parseInlineChops( env, apart.rest ),
-                apart.match[ 1 ], q ];
+            return [ q, $c.parseInlineChops( env, apart[ 1 ] ),
+                $c.unchops( apart[ 0 ] ), q ];
         } finally { quoteLevel--; }
     },
     "out": function ( chops, env ) {
-        var apart = $c.letChopLtrimRegex( chops, /^\s*(\S+)\s*/ );
+        var apart = $c.letChopWords( chops, 1 );
         if ( !apart ) throw new Error( "out needs an arg" );
-        return my.tag( "a",
-            "class", "external-link", "href", apart.match[ 1 ] )(
-            $c.parseInlineChops( env, apart.rest )
+        return my.tag( "a", "class", "external-link",
+            "href", $c.unchops( apart[ 0 ] ) )(
+            $c.parseInlineChops( env, apart[ 1 ] )
         );
     },
     "file": function ( chops, env ) {
-        var apart = $c.letChopLtrimRegex( chops, /^\s*(\S+)\s*/ );
+        var apart = $c.letChopWords( chops, 1 );
         if ( !apart ) throw new Error( "file needs an arg" );
-        return my.tag( "a", "href", my.toPath( apart.match[ 1 ] ) )(
-            $c.parseInlineChops( env, apart.rest )
+        return my.tag( "a",
+            "href", my.toPath( $c.unchops( apart[ 0 ] ) ) )(
+            $c.parseInlineChops( env, apart[ 1 ] )
         );
     },
     "nav": function ( chops, env ) {
-        var apart = $c.letChopLtrimRegex( chops, /^\s*(\S+)\s*/ );
+        var apart = $c.letChopWords( chops, 1 );
         if ( !apart ) throw new Error( "nav needs an arg" );
-        if ( apart.rest.length === 0 )
-            return new NameNavLink( my.toPath( apart.match[ 1 ] ) );
+        var path = my.toPath( $c.unchops( apart[ 0 ] ) );
+        if ( apart[ 1 ].length === 0 )
+            return new NameNavLink( path );
         else
-            return new NavLink( my.toPath( apart.match[ 1 ] ),
-                $c.parseInlineChops( env, apart.rest ) );
+            return new NavLink(
+                path, $c.parseInlineChops( env, apart[ 1 ] ) );
     },
     "nochops": function ( chops, env ) {
         return $c.unchops( $c.letChopLtrimRegex(
@@ -894,9 +913,17 @@ var widgetEnv = {
 };
 
 var manualWidgetEnv = {
-   "tok": function ( chops, env ) {
-       return new ManualToken();
-   }
+    "tok": function ( chops, env ) {
+        return new WidgetToken();
+    },
+    "nochops": function ( chops, env ) {
+        return $c.unchops( $c.letChopLtrimRegex(
+            chops, /^(?:(?!\n)\s)*[\n|]?/ ).rest );
+    },
+    "just": function ( chops, env ) {
+        return $c.parseInlineChops( env, $c.letChopLtrimRegex(
+            chops, /^(?:(?!\n)\s)*[\n|]?/ ).rest );
+    }
 };
 
 my.parseInLocal = function ( locals, source ) {
