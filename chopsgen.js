@@ -261,38 +261,42 @@ function attrEscape( content ) {
 _.rulebook( my, "widgetToHtml" );
 _.rulebook( my, "widgetToTitle" );
 
-_.rule( my.widgetToHtml, function ( fail, widget, path, state ) {
-    if ( !_.isString( widget ) ) fail( "It wasn't a string." );
-    return { state: state, html: my.htmlEscape( widget ) };
+_.rule( my.widgetToHtml, function ( widget, path, state ) {
+    if ( !_.isString( widget ) )
+        return _.fail( "It wasn't a string." );
+    return _.win( { state: state, html: my.htmlEscape( widget ) } );
 } );
 
-_.rule( my.widgetToTitle, function ( fail, widget ) {
-    if ( !_.isString( widget ) ) fail( "It wasn't a string." );
-    return my.htmlEscape( widget );
+_.rule( my.widgetToTitle, function ( widget ) {
+    if ( !_.isString( widget ) )
+        return _.fail( "It wasn't a string." );
+    return _.win( my.htmlEscape( widget ) );
 } );
 
-_.rule( my.widgetToHtml, function ( fail, widget, path, state ) {
-    if ( !_.likeArray( widget ) ) fail( "It wasn't likeArray." );
+_.rule( my.widgetToHtml, function ( widget, path, state ) {
+    if ( !_.likeArray( widget ) )
+        return _.fail( "It wasn't likeArray." );
     var widgetData = _.arrMap( widget, function ( it ) {
         var result = my.widgetToHtml( it, path, state );
         state = result.state;
         return result;
     } );
-    return {
+    return _.win( {
         state: state,
         js: _.arrMappend( widgetData,
             function ( it ) { return it.js || []; } ),
         css: _.arrMappend( widgetData,
             function ( it ) { return it.css || []; } ),
         html: _.arrMap( widgetData, _.pluckfn( "html" ) ).join( "" )
-    };
+    } );
 } );
 
-_.rule( my.widgetToTitle, function ( fail, widget ) {
-    if ( !_.likeArray( widget ) ) fail( "It wasn't likeArray." );
-    return _.arrMap( widget, function ( it ) {
+_.rule( my.widgetToTitle, function ( widget ) {
+    if ( !_.likeArray( widget ) )
+        return _.fail( "It wasn't likeArray." );
+    return _.win( _.arrMap( widget, function ( it ) {
         return my.widgetToTitle( it );
-    } ).join( "" );
+    } ).join( "" ) );
 } );
 
 function relDirs( from, to ) {
@@ -445,11 +449,13 @@ function HtmlTag( name, attrs, body ) {
     this.body_ = body;
 }
 
-_.rule( my.widgetToHtml, function ( fail, widget, path, state ) {
+_.rule( my.widgetToHtml, function ( widget, path, state ) {
     if ( !(widget instanceof HtmlTag) )
-        fail( "It wasn't an HtmlTag." );
+        return _.fail( "It wasn't an HtmlTag." );
     var name = widget.name_;
-    var openTag = "<" + name + _.arrMap( widget.attrs_, function ( kv ) {
+    var openTag = "<" + name + _.arrMap( widget.attrs_, function (
+        kv ) {
+        
         var v = kv[ 1 ];
         // TODO: Make Path a manual widget.
         if ( v instanceof Path )
@@ -460,8 +466,8 @@ _.rule( my.widgetToHtml, function ( fail, widget, path, state ) {
             kv[ 0 ] + "=" + "\"" + attrEscape( rendered.text ) + "\"";
     } ).join( "" ) + ">";
     var body = my.widgetToHtml( widget.body_, path, state );
-    return { state: body.state, js: body.js, css: body.css, html:
-        openTag + body.html + "</" + name + ">" };
+    return _.win( { state: body.state, js: body.js, css: body.css,
+        html: openTag + body.html + "</" + name + ">" } );
 } );
 
 my.tag = function ( name, var_args ) {
@@ -485,10 +491,10 @@ my.blockWidget = function ( widget ) {
     return new BlockWidget( widget );
 };
 
-_.rule( my.widgetToHtml, function ( fail, widget, path, state ) {
+_.rule( my.widgetToHtml, function ( widget, path, state ) {
     if ( !(widget instanceof BlockWidget) )
-        fail( "It wasn't a BlockWidget." );
-    return my.widgetToHtml( widget.widget_, path, state );
+        return _.fail( "It wasn't a BlockWidget." );
+    return _.win( my.widgetToHtml( widget.widget_, path, state ) );
 } );
 
 function getPage( state, path ) {
@@ -504,14 +510,14 @@ function NameNavLink( path ) {
     this.path_ = path;
 }
 
-_.rule( my.widgetToHtml, function ( fail, widget, path, state ) {
+_.rule( my.widgetToHtml, function ( widget, path, state ) {
     if ( !(widget instanceof NameNavLink) )
-        fail( "It wasn't a NameNavLink." );
+        return _.fail( "It wasn't a NameNavLink." );
     var name = getPage( state, widget.path_ ).name;
-    return my.widgetToHtml(
+    return _.win( my.widgetToHtml(
         widget.path_.linkWouldBeRedundant( path ) ? name :
             my.tag( "a", "href", widget.path_ )( name ),
-        path, state );
+        path, state ) );
 } );
 
 my.nameNavLink = function ( path ) {
@@ -523,23 +529,23 @@ function NavLink( path, content ) {
     this.content_ = content;
 }
 
-_.rule( my.widgetToHtml, function ( fail, widget, path, state ) {
+_.rule( my.widgetToHtml, function ( widget, path, state ) {
     if ( !(widget instanceof NavLink) )
-        fail( "It wasn't a NavLink." );
-    return my.widgetToHtml(
+        return _.fail( "It wasn't a NavLink." );
+    return _.win( my.widgetToHtml(
         widget.path_.linkWouldBeRedundant( path ) ? widget.content_ :
             my.tag( "a", "href", widget.path_ )( widget.content_ ),
-        path, state );
+        path, state ) );
 } );
 
 function HtmlRawWidget( html ) {
     this.html_ = html;
 }
 
-_.rule( my.widgetToHtml, function ( fail, widget, path, state ) {
+_.rule( my.widgetToHtml, function ( widget, path, state ) {
     if ( !(widget instanceof HtmlRawWidget) )
-        fail( "It wasn't an HtmlRawWidget." );
-    return { state: state, html: widget.html_ };
+        return _.fail( "It wasn't an HtmlRawWidget." );
+    return return _.win( { state: state, html: widget.html_ } );
 } );
 
 function DepsWidget( deps ) {
@@ -547,11 +553,11 @@ function DepsWidget( deps ) {
     this.css_ = _.arrCut( deps.css || [] );
 }
 
-_.rule( my.widgetToHtml, function ( fail, widget, path, state ) {
+_.rule( my.widgetToHtml, function ( widget, path, state ) {
     if ( !(widget instanceof DepsWidget) )
-        fail( "It wasn't a DepsWidget." );
-    return {
-        state: state, js: widget.js_, css: widget.css_, html: "" };
+        return _.fail( "It wasn't a DepsWidget." );
+    return _.win( {
+        state: state, js: widget.js_, css: widget.css_, html: "" } );
 } );
 
 my.depsWidget = function ( deps, body ) {
@@ -663,9 +669,9 @@ my.widget = function ( var_args ) {
     return new NiceWidget( _.arrCut( arguments ) );
 };
 
-_.rule( my.widgetToHtml, function ( fail, widget, path, state ) {
+_.rule( my.widgetToHtml, function ( widget, path, state ) {
     if ( !(widget instanceof NiceWidget) )
-        fail( "It wasn't a NiceWidget." );
+        return _.fail( "It wasn't a NiceWidget." );
     // TODO: Beware overflow... but note that if we ever have more
     // than 2^53 NiceWidgets on one page, we'll have much bigger
     // problems to deal with than just this one case of overflow. :-p
@@ -692,44 +698,41 @@ _.rule( my.widgetToHtml, function ( fail, widget, path, state ) {
         html.push( monad[ "html" ] );
         state = monad[ "state" ];
     } );
-    return { state: state, js: js, css: css, html: html.join( "" ) };
+    return _.win(
+        { state: state, js: js, css: css, html: html.join( "" ) } );
 } );
 
 
 _.rulebook( my, "manualWidgetToText" );
 
-_.rule( my.manualWidgetToText, function (
-    fail, widget, path, state ) {
-    
-    if ( !_.isString( widget ) ) fail( "It wasn't a string." );
-    return { state: state, text: widget };
+_.rule( my.manualWidgetToText, function ( widget, path, state ) {
+    if ( !_.isString( widget ) )
+        return _.fail( "It wasn't a string." );
+    return _.win( { state: state, text: widget } );
 } );
 
-_.rule( my.manualWidgetToText, function (
-    fail, widget, path, state ) {
-    
-    if ( !_.likeArray( widget ) ) fail( "It wasn't likeArray." );
+_.rule( my.manualWidgetToText, function ( widget, path, state ) {
+    if ( !_.likeArray( widget ) )
+        return _.fail( "It wasn't likeArray." );
     var widgetText = _.arrMap( widget, function ( it ) {
         var result = my.manualWidgetToText( it, path, state );
         state = result.state;
         return result.text;
     } );
-    return { state: state, text: widgetText.join( "" ) };
+    return _.win( { state: state, text: widgetText.join( "" ) } );
 } );
 
 function WidgetToken() {}
 
-_.rule( my.manualWidgetToText, function (
-    fail, widget, path, state ) {
-    
+_.rule( my.manualWidgetToText, function ( widget, path, state ) {
     if ( !(widget instanceof WidgetToken) )
-        fail( "It wasn't a WidgetToken." );
+        return _.fail( "It wasn't a WidgetToken." );
     if ( !(_.likeObjectLiteral( state ) && "token" in state
         && _.likeArray( state.token )) )
         throw new Error( "The state wasn't the right type." );
     if ( state.token.length === 0 )
         throw new Error( "The token stack was empty." );
-    return { state: state, text: state.token[ 0 ] };
+    return _.win( { state: state, text: state.token[ 0 ] } );
 } );
 
 
