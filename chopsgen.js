@@ -545,7 +545,7 @@ function HtmlRawWidget( html ) {
 _.rule( my.widgetToHtml, function ( widget, path, state ) {
     if ( !(widget instanceof HtmlRawWidget) )
         return _.fail( "It wasn't an HtmlRawWidget." );
-    return return _.win( { state: state, html: widget.html_ } );
+    return _.win( { state: state, html: widget.html_ } );
 } );
 
 function DepsWidget( deps ) {
@@ -1032,12 +1032,16 @@ function renderJsDependencies( deps, path ) {
 
 function makePages() { return {}; }
 
-my.definePage = function (
-    pages, permalink, usesAbsolute, is404, name, title, icon, body ) {
+my.makePage = function (
+    permalink, usesAbsolute, is404, name, title, icon, body ) {
     
-    pages[ my.toPath( permalink ).abs() ] =
-        { usesAbsolute: usesAbsolute, is404: is404,
-            name: name, title: title, icon: icon, body: body };
+    return { permalink: my.toPath( permalink ),
+        usesAbsolute: usesAbsolute, is404: is404,
+        name: name, title: title, icon: icon, body: body };
+};
+
+my.definePage = function ( pages, page ) {
+    pages[ page.permalink.abs() ] = page;
 };
 
 function renderPage( pages, page, atpath, opts ) {
