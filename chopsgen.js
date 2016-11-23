@@ -181,9 +181,16 @@ var root = (function () { return this; })() || topThis;
 // Actually, newer versions of Node don't expose the global object
 // that way either, and they probably don't put the whole file in a
 // local context.
-if ( !((root && typeof root === "object" && root[ "Object" ])
-    || typeof GLOBAL === "undefined") )
-    root = GLOBAL;
+//
+// The newest versions use a variable called "global". We were using
+// "GLOBAL" for a while, but that's been deprecated. (I'm not sure
+// whether "global" existed at the time.)
+if ( !(root && typeof root === "object" && root[ "Object" ]) ) {
+    if ( typeof global !== "undefined" )
+        root = global;
+    else if ( typeof GLOBAL !== "undefined" )
+        root = GLOBAL;
+}
 
 var _, $c, my;
 if ( topArgs === void 0 && typeof exports === "undefined" ) {
@@ -874,6 +881,7 @@ var snippetEnv = $c.env( {
         return [ "[", $c.parseInlineChops( env, chops ), "]" ];
     },
     "i": ltrimParser( my.tag( "i" ) ),
+    "b": ltrimParser( my.tag( "b" ) ),
     "em": ltrimParser( my.tag( "em" ) ),
     "cite": ltrimParser( my.tag( "cite" ) ),
     "sup": ltrimParser( my.tag( "sup" ) ),
@@ -899,6 +907,8 @@ var snippetEnv = $c.env( {
     "en": function ( chops, env ) { return enDash; },
     "copyright": function ( chops, env ) { return copyright; },
     "pct": function ( chops, env ) { return "%"; },
+    "<": function ( chops, env ) { return "["; },
+    ">": function ( chops, env ) { return "]"; },
     // TODO: Turn "quote" and "quotepunc" into custom snippet types
     // that manipulate the state they pass to their children.
     // TODO: Figure out how [quotepunc . Foo [quote foo [quote foo]]]
@@ -954,7 +964,12 @@ var snippetEnv = $c.env( {
 } );
 
 var unstructuredSnippetEnv = $c.env( {
+    "": function ( chops, env ) {
+        return [ "[", $c.parseInlineChops( env, chops ), "]" ];
+    },
     "pct": function ( chops, env ) { return "%"; },
+    "<": function ( chops, env ) { return "["; },
+    ">": function ( chops, env ) { return "]"; },
     "tok": function ( chops, env ) {
         return new SnippetToken();
     },
