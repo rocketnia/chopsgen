@@ -76,12 +76,12 @@
 //   You might like to visit these sites:
 //   
 //   [ul [li [out https://github.com/rocketnia/lathe Lathe].]
-//       [li [out http://www.rocketnia.com/ My website,
-//           RocketN[i I]A.com].]]
+//       [li [out https://www.rocketnia.com/ My website,
+//           Rocketnia.com].]]
 //   
-//   If you say markdown is better than this, [em I keel you]. But
-//   seriously, I much prefer languages with regular structure and few
-//   special characters. Such as, say, this markup language:
+//   [em No way] is Markdown better than this, right? Personally, I
+//   much prefer languages with regular structure and few special
+//   characters. Such as, say, this markup language:
 //   
 //   [cpre indented [nochops
 //   [h2 Example markup]
