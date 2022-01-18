@@ -1188,7 +1188,6 @@ function renderPage( pages, page, atpath, opts ) {
         "<head>" +
         "<meta http-equiv=\"Content-Type\" " +
             "content=\"text/html;charset=UTF-8\" />" +
-        "<title>" + my.snippetToTitle( page.title ) + "</title>" +
         
         // NOTE: When opts_mock is true and opts_mockBaseTagPrefix is
         // provided, this <base> tag supports the relative URLs in the
@@ -1208,6 +1207,7 @@ function renderPage( pages, page, atpath, opts ) {
         _.arrMap( cssDependencies, function ( css ) {
             return renderCssDependency( css, atpath );
         } ).join( "" ) +
+        "<title>" + my.snippetToTitle( page.title ) + "</title>" +
         "<link rel=\"shortcut icon\" href=\"" +
             attrEscape( my.toPath( page.icon ).from( atpath ) ) +
             "\" />" +
