@@ -1208,9 +1208,15 @@ function renderPage( pages, page, atpath, opts ) {
             return renderCssDependency( css, atpath );
         } ).join( "" ) +
         "<title>" + my.snippetToTitle( page.title ) + "</title>" +
+        "<meta name=\"viewport\" content=\"" +
+            "width=device-width," +
+            "minimum-scale=1.0," +
+            "initial-scale=1.0," +
+            "user-scalable=yes" +
+        "\" />" +
         "<link rel=\"shortcut icon\" href=\"" +
             attrEscape( my.toPath( page.icon ).from( atpath ) ) +
-            "\" />" +
+        "\" />" +
         "</head>" +
         "<body>" +
         body.html +
