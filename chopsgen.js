@@ -1101,11 +1101,12 @@ function renderJsDependencies( deps, path ) {
 function makePages() { return {}; }
 
 my.makePage = function (
-    permalink, usesAbsolute, is404, name, title, icon, body ) {
-    
+    permalink, usesAbsolute, is404, name, title, viewport, icon, body
+) {
     return { permalink: my.toPath( permalink ),
         usesAbsolute: usesAbsolute, is404: is404,
-        name: name, title: title, icon: icon, body: body };
+        name: name, title: title, viewport: viewport, icon: icon,
+        body: body };
 };
 
 my.definePage = function ( pages, page ) {
@@ -1208,12 +1209,10 @@ function renderPage( pages, page, atpath, opts ) {
             return renderCssDependency( css, atpath );
         } ).join( "" ) +
         "<title>" + my.snippetToTitle( page.title ) + "</title>" +
-        "<meta name=\"viewport\" content=\"" +
-            "width=device-width," +
-            "minimum-scale=1.0," +
-            "initial-scale=1.0," +
-            "user-scalable=yes" +
-        "\" />" +
+        (page.viewport !== null ?
+            "<meta name=\"viewport\" " +
+                "content=\"" + attrEscape( page.viewport ) + "\" />" :
+            "") +
         "<link rel=\"shortcut icon\" href=\"" +
             attrEscape( my.toPath( page.icon ).from( atpath ) ) +
         "\" />" +
